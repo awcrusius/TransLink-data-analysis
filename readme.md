@@ -34,6 +34,7 @@
       <a href="#about-the-project">About The Project</a>
       <ul>
         <li><a href="#built-with">Built With</a></li>
+        <li><a href="#collected-data">Collected Data</a></li>
       </ul>
     </li>
     <li>
@@ -85,11 +86,11 @@ To get started running the code, see  <a href="#getting-started">Getting Started
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- COLLECTED DATA -->
-## COLLECTED DATA
+## Collected Data
 
 <a href="https://mega.nz/folder/vc9lCbiD#6yG6-qpfd8ODDX-359gtDQ">Collected data linked here</a>
 
-Our current dataset is 9 months long from December 17th to May 23rd and is 23.66gb uncompressed.
+Our current dataset is 7 months long from December 17th to May 23rd and is 23.66gb uncompressed.
 
 <!-- GETTING STARTED -->
 ## Getting Started
