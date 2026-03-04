@@ -69,7 +69,7 @@ def create_rt_trip(db):
                 next_stop_schedule_relationship VARCHAR,
                 vehicle_id VARCHAR,
                 vehicle_label VARCHAR,
-                PRIMARY KEY (trip_id, next_stop_id, vehicle_id)
+                PRIMARY KEY (trip_id, vehicle_id, next_stop_arrival_time)
             )
             ''')
     
@@ -271,6 +271,7 @@ def create_db(dir):
     '''
     db = duckdb.connect(dir, config={
         'wal_autocheckpoint': '8mb',
+        'memory_limit': '2GB',
     })
     create_rt_position(db)
     create_rt_trip(db)
