@@ -1,10 +1,12 @@
-# Use python 3.13.1-slim-bullseye as base
-FROM python:3.13.1-slim-bullseye
+# Use python-slim as base
+FROM python:3.14.3-slim
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    python3-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libc-dev \
+    libpq-dev \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages
@@ -13,7 +15,9 @@ RUN pip install --no-cache-dir \
     requests \
     PyYAML \
     gtfs-realtime-bindings \
-    pandas
+    pandas  \
+    psycopg2-binary  \
+    timescale-vector
 
 # Set the working directory in the container
 WORKDIR /app
