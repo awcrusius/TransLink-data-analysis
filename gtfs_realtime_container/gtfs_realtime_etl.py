@@ -1,6 +1,5 @@
 from etl_helper import *
-import requests, yaml, duckdb, sched, time, sys
-from google.transit import gtfs_realtime_pb2
+import requests, yaml, sched, time, sys
 
 
     
@@ -14,12 +13,13 @@ def schedule_pos_ingest(n,file,db):                                      #This f
     Args:
         n (int): Number of minutes between executions
         file (file obj): yaml file containing api keys
-        db (duckdb db): transit database object to insert data 
+        db (psycopg db obj): transit database object to insert data 
     """
     scheduler.enter(n * 60, 0, schedule_pos_ingest, (n,file,db))    #schedules next operation before completing current to maximise consistency in timing
     url = Rotated_api_link('Translink',file,'position_link')
     feed = get_feed(url)
-    insert_rt_position(db, feed)
+    if feed is not None:
+        insert_rt_position(db, feed)
 
 def schedule_trip_ingest(n,file,db):                                      #This function was roughly based on https://stackoverflow.com/questions/50264230/how-to-schedule-different-tasks-at-different-times-in-never-ending-program
     """
@@ -28,12 +28,13 @@ def schedule_trip_ingest(n,file,db):                                      #This 
     Args:
         n (int): Number of minutes between executions
         file (file obj): yaml file containing api keys
-        db (duckdb db): transit database object to insert data 
+        db (psycopg db obj): transit database object to insert data 
     """
     scheduler.enter(n * 60, 0, schedule_trip_ingest, (n,file,db))   #schedules next operation before completing current to maximise consistency in timing
     url = Rotated_api_link('Translink',file,'trip_link')
     feed = get_feed(url)
-    insert_rt_trip(db, feed)
+    if feed is not None:
+        insert_rt_trip(db, feed)
 
 
 def schedule_alert_ingest(n,file,db):                                      #This function was roughly based on https://stackoverflow.com/questions/50264230/how-to-schedule-different-tasks-at-different-times-in-never-ending-program
@@ -43,12 +44,13 @@ def schedule_alert_ingest(n,file,db):                                      #This
     Args:
         n (int): Number of minutes between executions
         file (file obj): yaml file containing api keys
-        db (duckdb db): transit database object to insert data 
+        db (psycopg db obj): transit database object to insert data 
     """
     scheduler.enter(n * 60, 0, schedule_alert_ingest, (n,file,db))  #schedules next operation before completing current to maximise consistency in timing
     url = Rotated_api_link('Translink',file,'alerts_link')
     feed = get_feed(url)
-    insert_rt_alerts(db, feed)
+    if feed is not None:
+        insert_rt_alerts(db, feed)
 
 
 def main():
@@ -56,8 +58,7 @@ def main():
     with open('config/config.yaml', 'r') as file:    #TODO put link in gtfs_realtime_etl.config
         config = yaml.load(file,Loader=yaml.SafeLoader)
 
-    dir = 'output_database/transit.db'
-    transit_db = create_db(dir)
+    transit_db = create_db(config["database"])
     
     scheduler.enter(0, 0, schedule_pos_ingest, (1,config,transit_db))
     scheduler.enter(30, 0, schedule_trip_ingest, (1,config,transit_db))
