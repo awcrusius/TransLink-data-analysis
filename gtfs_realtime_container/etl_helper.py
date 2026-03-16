@@ -1,5 +1,5 @@
 import pandas as pd
-import requests, yaml, sys, psycopg2
+import requests, yaml, sys, psycopg2,time
 from datetime import datetime
 from google.transit import gtfs_realtime_pb2
 
@@ -317,19 +317,20 @@ def create_db(dbConf):
     Returns:
         duckdb(db): database
     '''
-
-    try:
-        db = psycopg2.connect(database=dbConf["name"],
-                                user=dbConf["user"],
-                                password=dbConf["pass"],
-                                host=dbConf["host"],
-                                port=dbConf["port"])
-        print("Database connected successfully")
-        create_rt_position(db)
-        create_rt_trip(db)
-        create_rt_alerts(db)
-        return db
-    except:
-        print("Database not connected successfully") # Add more error reporting
+    for attempt in range(10):
+        try:
+            db = psycopg2.connect(database=dbConf["name"],
+                                    user=dbConf["user"],
+                                    password=dbConf["pass"],
+                                    host=dbConf["host"],
+                                    port=dbConf["port"])
+            print("Database connected successfully")
+            create_rt_position(db)
+            create_rt_trip(db)
+            create_rt_alerts(db)
+            return db
+        except:
+            print(f"Could not connect to database. (attempt {attempt + 1}/10)")
+            time.sleep(5)
+        print("Could not connect to database after 10 attempts")
         exit(1)
-    
