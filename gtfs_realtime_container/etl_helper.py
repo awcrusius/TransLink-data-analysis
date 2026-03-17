@@ -21,6 +21,22 @@ def check_datetime_null(input:str):
     else:
         return None
     
+def load_api_keys(config):
+    keys = []
+    i = 0
+    while True:
+        key = os.environ.get(f"TRANSLINK_API_KEY_{i}")
+        if not key:  # catches both None and ""
+            break
+        keys.append(key)
+        i += 1
+    if not keys:
+        raise SystemExit("No API keys found. Set TRANSLINK_API_KEY_0 in your .env file.")
+    config["Translink"]["num_keys"] = len(keys)
+    for i, key in enumerate(keys):
+        config["Translink"][f"api_key{i}"] = key
+    return config
+    
 def parse_arrival_time(stop_time_update):
     try:
         t = stop_time_update.arrival.time
@@ -329,8 +345,8 @@ def create_db():
             create_rt_trip(db)
             create_rt_alerts(db)
             return db
-        except:
-            print(f"Could not connect to database. (attempt {attempt + 1}/10)")
+        except psycopg2.OperationalError as e:
+            print(f"Could not connect to database. (attempt {attempt + 1}/10): {e}")
             time.sleep(5)
     print("Could not connect to database after 10 attempts")
     exit(1)

@@ -57,9 +57,12 @@ def schedule_alert_ingest(n,file,db):
 
 
 def main():
-    #create full url from config.yaml
+    # Create full url from config.yaml
     with open('config/config.yaml', 'r') as file:    #TODO put link in gtfs_realtime_etl.config
         config = yaml.load(file,Loader=yaml.SafeLoader)
+    
+    # Add api keys to config in memory only
+    load_api_keys(config)
 
     transit_db = create_db()
     
