@@ -1,0 +1,50 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  gtfs_ingest:
+    image: cmpt353translinkdataanalysis:latest
+    environment:
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      environment:
+      TRANSLINK_API_KEY_0: ${TRANSLINK_API_KEY_0:-}
+      TRANSLINK_API_KEY_1: ${TRANSLINK_API_KEY_1:-}
+      TRANSLINK_API_KEY_2: ${TRANSLINK_API_KEY_2:-}
+      TRANSLINK_API_KEY_3: ${TRANSLINK_API_KEY_3:-}
+      TRANSLINK_API_KEY_4: ${TRANSLINK_API_KEY_4:-}
+      TRANSLINK_API_KEY_5: ${TRANSLINK_API_KEY_5:-}
+      TRANSLINK_API_KEY_6: ${TRANSLINK_API_KEY_6:-}
+      TRANSLINK_API_KEY_7: ${TRANSLINK_API_KEY_7:-}
+      TRANSLINK_API_KEY_8: ${TRANSLINK_API_KEY_8:-}
+      TRANSLINK_API_KEY_9: ${TRANSLINK_API_KEY_9:-}
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  transit_network:
+    driver: bridge
+
+volumes:
+  timescale_data:

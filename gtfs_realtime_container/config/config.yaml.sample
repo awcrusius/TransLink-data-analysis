@@ -1,7 +1,0 @@
-Translink:
-  trip_link: https://gtfsapi.translink.ca/v3/gtfsrealtime?apikey=       # These are the default links for Translink Vancouver, if you are considering using another
-  position_link: https://gtfsapi.translink.ca/v3/gtfsposition?apikey=   # considering using another gtfs feed, significant modifications may be required due to the 
-  alerts_link: https://gtfsapi.translink.ca/v3/gtfsalerts?apikey=       # inconsistent data types of gtfs spec 3 feeds.
-  api_key0:  # Insert API key here
-  num_keys: 1 # Total number of keys to use: please ensure the keys start at api_key0 and have no gaps (missing API keys)
-  calls_per_key: 1000 # Number of calls that can be made to each API key per day. if uneven, use the lowest value across all keys.
