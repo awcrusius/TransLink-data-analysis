@@ -2,4 +2,21 @@ Translink:
   trip_link: https://gtfsapi.translink.ca/v3/gtfsrealtime?apikey=
   position_link: https://gtfsapi.translink.ca/v3/gtfsposition?apikey=
   alerts_link: https://gtfsapi.translink.ca/v3/gtfsalerts?apikey=
-  calls_per_key: 1000 # Number of calls that can be made to each API key per day. if uneven, use the lowest value across all keys.
+
+  # Below values are for scheduling the ETL process. 
+  # They can be adjusted based on the number of API keys available and the expected data volume.
+
+  calls_per_key: 1000 # Max number of calls per API key per day. if uneven, use the lowest value across all keys.
+  
+  # Time units per call (used for dynamic scheduling based on number of API keys times calls_per_key.) 
+  # Can be thought of as the number of seconds per call, assuming one time unit was one second.
+  # if unsure, leave recommended values as is.
+  position_units_per_call: 1
+  trip_units_per_call: 1
+  alerts_units_per_call: 30
+
+  # Overrides time units per call if you want to set a fixed time for each ingest process, 
+  # regardless of the number of API keys and calls per key.
+  position_time_override: null
+  trip_time_override: null
+  alerts_time_override: null

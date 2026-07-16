@@ -1,0 +1,12 @@
+pandas
+numpy
+requests
+pyyaml
+psycopg2-binary
+gtfs-realtime-bindings
+gtfs_functions
+seaborn
+matplotlib
+plotly
+kaleido
+dash

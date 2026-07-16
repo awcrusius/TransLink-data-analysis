@@ -1,23 +1,14 @@
 # Use python-slim as base
 FROM python:3.14.3-slim
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libc-dev \
-    libpq-dev \
-    libffi-dev \
-    && rm -rf /var/lib/apt/lists/*
-
 # Install Python packages
 RUN pip install --no-cache-dir \
-    duckdb \
     requests \
     PyYAML \
     gtfs-realtime-bindings \
+    numpy  \
     pandas  \
-    psycopg2-binary  \
-    timescale-vector
+    psycopg2-binary
 
 # Set the working directory in the container
 WORKDIR /app

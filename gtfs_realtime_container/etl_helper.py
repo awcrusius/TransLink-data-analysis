@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import requests, yaml, sys, psycopg2,time,os
 from datetime import datetime
 from google.transit import gtfs_realtime_pb2
@@ -7,21 +8,38 @@ api_modifier = 0
 status_failure_flag = 0
 
 def check_datetime_null(input:str):
-    '''
+    """
     Returns date if input is non null else returns None
 
-    Args: 
-        input(string):  Unix time or NULL like string of numbers
+    Parameters    
+    ---------- 
+    input: string
+        Unix time or NULL like string of numbers
 
-    Returns:
-        output(string) or None if null
-    '''
+    Returns
+    -------
+    output: pandas datetime object or None if null
+    """
     if input and input != 0:
         return pd.to_datetime(input, unit='s')
     else:
         return None
     
 def load_api_keys(config):
+    """
+    Loads API keys from environment variables into config in memory only.
+    Expects environment variables to be in format PROVIDER_API_KEY_N where N is a number
+
+    Parameters    
+    ----------
+    config: yaml file object
+        config.yaml file loaded into memory
+
+    Returns
+    -------
+    config: yaml file object
+        config.yaml file loaded into memory with api keys added
+    """
     keys = []
     i = 0
     while True:
@@ -36,8 +54,40 @@ def load_api_keys(config):
     for i, key in enumerate(keys):
         config["Translink"][f"api_key{i}"] = key
     return config
+
+def calculate_ingest_time(config,ingest_category):
+    """
+    Calculates ingest time for given ingest category based on config.yaml values
+
+    Parameters
+    ----------
+    config: yaml file object
+        config.yaml file loaded into memory   
+    ingest_category: string 
+        Category of ingest to calculate time for.
+        Options include : 'position','trip','alerts'
+    """
+    safety_margin = .95 #Percentage of max calls per day to use to avoid hitting limits
+
+    total_calls_per_day = config["Translink"]["calls_per_key"] * config["Translink"]["num_keys"]
+    total_time_units = config["Translink"]["position_units_per_call"] \
+                        + config["Translink"]["trip_units_per_call"] \
+                        + config["Translink"]["alerts_units_per_call"]
+    category_time_units = config["Translink"][f"{ingest_category}_units_per_call"]
+    category_time_val = np.floor((category_time_units/total_time_units) * total_calls_per_day * safety_margin)
+    
+    return(category_time_val)
     
 def parse_arrival_time(stop_time_update):
+    """
+    Parses arrival time from stop_time_update and returns as pandas timestamp.
+    If arrival time is null or 0, returns timestamp for 1970-01-01
+
+    Parameters
+    ----------
+    stop_time_update: gtfs_realtime_pb2.TripUpdate.StopTimeUpdate
+        stop time update object
+    """
     try:
         t = stop_time_update.arrival.time
         if t is None or t == 0:
@@ -47,13 +97,15 @@ def parse_arrival_time(stop_time_update):
         return pd.Timestamp('1970-01-01')
 
 def create_rt_position(db):
-    '''
+    """
     Creates a table in the database db for GTFS realtime trip update data if 
     not already created. Also creates index and hypertable for maximum ingestion efficiency.
 
-    Args: 
-        db: a psycopg2 connection object
-    '''
+    Parameters
+    ----------
+    db: psycopg2 connection object
+        Connection to the database where the table should be created
+    """
     with db.cursor() as cur:
         cur.execute('''
             CREATE TABLE IF NOT EXISTS rt_position
@@ -84,14 +136,15 @@ def create_rt_position(db):
 
     
 def create_rt_trip(db):
-    '''
+    """
     Creates a table in the database db for GTFS realtime trip update data if 
     not already created. Also creates index and hypertable for maximum ingestion efficiency.
 
-    Args: 
-        db: a psycopg2 connection object
-    
-    '''
+    Parameters
+    ----------
+    db: psycopg2 connection object
+        Connection to the database where the table should be created
+    """
     with db.cursor() as cur:
         cur.execute('''CREATE TABLE IF NOT EXISTS rt_trip (
             trip_id TEXT,
@@ -121,14 +174,15 @@ def create_rt_trip(db):
     db.commit()
     
 def create_rt_alerts(db):
-    '''
+    """ 
     Creates a table in the database db for GTFS realtime service alert data if 
     not already created. Also creates index and hypertable for maximum ingestion efficiency.
 
-    Args: 
-        db: a psycopg2 connection object
-    '''
-
+    Parameters
+    ----------
+    db: psycopg2 connection object
+        Connection to the database where the table should be created
+    """
     with db.cursor() as cur:
         cur.execute('''CREATE TABLE IF NOT EXISTS rt_alerts (
             alert_id TEXT,
@@ -154,6 +208,16 @@ def create_rt_alerts(db):
     db.commit()
     
 def insert_rt_position(db,position_feed):
+    """ 
+    Inserts GTFS realtime position data from most recent feed grab from position_feed into database db
+
+    Parameters
+    ----------
+    db: psycopg2 connection object
+        Connection to the database where the data should be inserted
+    position_feed: gtfs_realtime_pb2.FeedMessage
+        A GTFS realtime feed message containing vehicle position data
+    """
     rows = []
     for entity in position_feed.entity:
         vehicle = entity.vehicle
@@ -193,6 +257,16 @@ def insert_rt_position(db,position_feed):
         print(f"insert_rt_position failed: {e}", file=sys.stdout)
 
 def insert_rt_trip(db,trip_feed):
+    """ 
+    Inserts GTFS realtime trip update data from most recent feed grab from trip_feed into database db 
+
+    Parameters
+    ----------
+    db: psycopg2 connection object
+        Connection to the database where the data should be inserted
+    trip_feed: gtfs_realtime_pb2.FeedMessage
+        A GTFS realtime feed message containing trip update data
+    """
     rows = []
     for entity in trip_feed.entity:
         trip_update = entity.trip_update
@@ -235,6 +309,16 @@ def insert_rt_trip(db,trip_feed):
         print(f"insert_rt_trip failed: {e}", file=sys.stdout)
 
 def insert_rt_alerts(db, alert_feed):
+    """ 
+    Inserts GTFS realtime alert data from most recent feed grab from alert_feed into database db
+
+    Parameters
+    ----------
+    db: psycopg2 connection object
+        Connection to the database where the data should be inserted
+    alert_feed: gtfs_realtime_pb2.FeedMessage
+        A GTFS realtime feed message containing alert data
+    """
     rows = []
     for entity in alert_feed.entity:
         listed_route_ids = []
@@ -276,6 +360,20 @@ def insert_rt_alerts(db, alert_feed):
         print(f"insert_rt_alerts failed: {e}", file=sys.stdout)
 
 def get_feed(url):
+    """ 
+    Fetches the GTFS-realtime feed from the specified URL.
+
+    Parameters
+    ----------
+    url: string
+        The URL of the GTFS-realtime feed.
+
+    Returns
+    -------
+    gtfs_feed: gtfs_realtime_pb2.FeedMessage
+        The parsed GTFS-realtime feed.
+    """
+
     global status_failure_flag
     now = datetime.now().strftime("%m/%d, %H:%M:%S")
     gtfs_feed = gtfs_realtime_pb2.FeedMessage() # type: ignore
@@ -296,24 +394,30 @@ def get_feed(url):
             raise SystemExit('4 consecutive failures in response at ' + now)
         
         
-def Rotated_api_link(Provider,file,link_type):
-    """
+def Rotated_api_link(provider,file,link_type):
+    """ 
     Returns api link and rotates api keys every time called 
     
-    Args:
-        Provider (string): provider for API keys
-        file (file object): file containing API keys
-        link_type (string): string containing link type. 
+    Parameters
+    ----------
+    provider: string
+        provider for API keys
+    file: file object 
+        file containing API keys
+    link_type :string
+        string containing link type. 
         options include 'trip_link','position_link','alerts_link'
 
-    Returns:
-        URL (string): URL of desired api with rotated keys
+    Returns
+    -------
+    URL: string
+        URL of desired api with rotated keys
     """
     global api_modifier
 
-    url = file[Provider][link_type] + file[Provider]['api_key' + str(api_modifier)]
+    url = file[provider][link_type] + file[provider]['api_key' + str(api_modifier)]
     
-    if api_modifier >= file[Provider]['num_keys'] - 1:
+    if api_modifier >= file[provider]['num_keys'] - 1:
         api_modifier = 0 
 
     else:
@@ -323,15 +427,12 @@ def Rotated_api_link(Provider,file,link_type):
 
 
 def create_db():
-    '''
-    Creates database at provided path if doesn't exist and creates tables if doesn't exist
+    ''' Creates database at provided path if doesn't exist and creates tables if doesn't exist
 
-    Args: 
-        dir(string):  path for database file
-        dbConf: config.yaml object filtered for only "database" items
-
-    Returns:
-        duckdb(db): database
+    Returns
+    -------
+    db: psycopg2 connection object 
+        New connection to database
     '''
     for attempt in range(10):
         try:
