@@ -1,0 +1,7 @@
+# Runtime dependencies for the GTFS-realtime ETL pipeline
+# (mirrors the packages installed in gtfs_realtime_container/Dockerfile)
+duckdb==1.5.4
+requests==2.33.1
+PyYAML==6.0.1
+gtfs-realtime-bindings==2.1.0
+pandas==3.0.3
